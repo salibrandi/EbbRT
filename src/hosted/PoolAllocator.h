@@ -24,18 +24,17 @@ namespace ebbrt {
   class PoolAllocator : public StaticSharedEbb<PoolAllocator> {
     private:
       ebbrt::Messenger::NetworkId network_id_;
-      std::string binary_path_;
       int num_nodes_;
-      std::vector<ebbrt::NodeAllocator::NodeDescriptor> node_descriptors_;
+      std::mutex m_;
+      std::string binary_path_;
 
     public:
-      // TODO: Figure out if these are needded:
-      //int cpus = DefaultCpus
-      //int ram = DefaultRam
-      //std::string arguments = DefaultArguments
-      ebbrt::Future<void> AllocateNetwork();
+      std::vector<ebbrt::Promise<int>> pool_futures;
+      std::vector<ebbrt::NodeAllocator::NodeDescriptor> node_descriptors_;
+
       void AllocatePool(std::string binary_path, int numNodes);
       void AllocateNode();
+      ebbrt::NodeAllocator::NodeDescriptor GetNodeDescriptor(int i);
   };
   const constexpr auto pool_allocator = EbbRef<PoolAllocator>(kPoolAllocatorId);
 }
