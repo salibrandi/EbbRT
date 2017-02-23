@@ -169,7 +169,7 @@ void Cpu::Shutdown(void) {
       if (!shutdown_.compare_exchange_strong(zero, 1))
         return;
     }
-    for (size_t i = 0; i < 1; i++) {
+    for (size_t i = 0; i < numCpus_; i++) {
       printf("stopping cpu %zd\n", i);
       GetByIndex(i)->ctxt_.io_service_.stop();
     }
