@@ -40,7 +40,7 @@ void ebbrt::PoolAllocator::AllocatePool(std::string binary_path,
   binary_path_ = binary_path;
   std::cerr << "Pool Allocation Details: " << std::endl;
   std::cerr << "|   img: " << binary_path_ << std::endl;
-  std::cerr << "| nodes: " << num_nodes_ << std::endl;
+  std::cerr << "| nodes: " << num_nodes << std::endl;
 
   int cpu_num = ebbrt::Cpu::GetPhysCpus();
   // Round robin through the available cpus
