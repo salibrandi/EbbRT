@@ -22,6 +22,8 @@ void AppMain() {
     "/bm/helloworld.elf32";
   unsigned int num_nodes = NumNodes;
 
+  struct timeval START_TIME;
+  gettimeofday(&START_TIME, NULL);
   Printer::Init().Then([bindir, num_nodes](ebbrt::Future<void> f) {
     f.Get();
     try {
@@ -32,21 +34,15 @@ void AppMain() {
     }
   });
 
-  // Initialize Pool futures
-  for (unsigned int i=0 ; i < num_nodes; i++) {
-    ebbrt::pool_allocator->pool_futures.push_back(ebbrt::Promise<int>());
-  }
 
-  for (unsigned int i=0 ; i < num_nodes; i++) {
-    // Waiting for Future
-    auto nf = ebbrt::pool_allocator->pool_futures[i].GetFuture();
-    nf.Block();
-    ebbrt::pool_allocator->node_descriptors_[i].NetworkId().Then([](ebbrt::Future<ebbrt::Messenger::NetworkId> inner) {
-      auto nid = inner.Get();
-      printer->Execute(nid);
-    });
-  }
-
+  ebbrt::pool_allocator->waitPool().Then([START_TIME](ebbrt::Future<void> f) {
+    f.Get();
+    struct timeval END_TIME;
+    gettimeofday(&END_TIME, NULL);
+    std::printf("ALLOCATION TIME: %lf seconds\n",
+      (END_TIME.tv_sec - START_TIME.tv_sec) +
+      ((END_TIME.tv_usec - START_TIME.tv_usec) / 1000000.0));
+  });
 }
 
 int main(int argc, char** argv) {
@@ -57,8 +53,7 @@ int main(int argc, char** argv) {
     NumNodes = std::atoi(argv[1]);
   }
 
-  pthread_t tid = ebbrt::Cpu::EarlyInit(5);
-
+  pthread_t tid = ebbrt::Cpu::EarlyInit((size_t) NumNodes);
   pthread_join(tid, &status);
 
   // This is redundant I think but I think it is also likely safe
