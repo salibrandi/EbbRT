@@ -5,50 +5,50 @@
 #ifndef NDEBUG
 #include <sys/socket.h>
 #endif
-//#include <ctime>
-//#include <fstream>
 #include <iostream>
-//#include <sstream>
 
-//#include "../CapnpMessage.h"
 #include "Debug.h"
 #include "Cpu.h"
 #include "Messenger.h"
 #include "PoolAllocator.h"
 #include "NodeAllocator.h"
-//#include <RuntimeInfo.capnp.h>
-//#include <boost/filesystem.hpp>
-//#include <capnp/message.h>
 
 #include "../GlobalIdMap.h"
 
-void ebbrt::PoolAllocator::AllocateNode() {
-  std::lock_guard<std::mutex> guard(m_);
-  node_descriptors_.push_back(
-      ebbrt::node_allocator->AllocateNode(binary_path_)
-  );
-  std::cerr << "Allocated Node: " << num_nodes_ << std::endl;
-  // Node ready to work, set future to true
-  pool_futures[num_nodes_].SetValue(1);
-  num_nodes_++;
+void ebbrt::PoolAllocator::AllocateNode(int i) {
+  auto nd = ebbrt::node_allocator->AllocateNode(binary_path_);
+  nd.NetworkId().Then([this,i](ebbrt::Future<ebbrt::Messenger::NetworkId> inner) {
+    auto nid =inner.Get();
+    std::cerr << "Allocated Node: " << i << std::endl;
+    num_nodes_alloc_.fetch_add(1);
+    nids_[i] = nid;
+    
+    if (num_nodes_alloc_ == num_nodes_) {
+      // Node ready to work, set future to true
+      pool_promise_.SetValue(); 
+    }
+  });
 }
 
 void ebbrt::PoolAllocator::AllocatePool(std::string binary_path, 
     int num_nodes) {
 
-  num_nodes_ = 0;
+  num_nodes_ = num_nodes;
+  num_nodes_alloc_.store(0);
   binary_path_ = binary_path;
+  nids_ = new ebbrt::Messenger::NetworkId [num_nodes_];
+
+  int cpu_num = ebbrt::Cpu::GetPhysCpus();
+
   std::cerr << "Pool Allocation Details: " << std::endl;
   std::cerr << "|   img: " << binary_path_ << std::endl;
   std::cerr << "| nodes: " << num_nodes << std::endl;
+  std::cerr << "|  cpus: " << cpu_num << std::endl;
 
-  int cpu_num = ebbrt::Cpu::GetPhysCpus();
   // Round robin through the available cpus
   for (int i = 0; i < num_nodes; i++) {
     auto cpu_i = ebbrt::Cpu::GetByIndex(i % cpu_num);
     auto ctxt = cpu_i->get_context();
-    ebbrt::event_manager->SpawnRemote([this]() {
-        AllocateNode();
-    }, ctxt);
+    ebbrt::event_manager->Spawn([this, i]() { AllocateNode(i); }, ctxt, true);
   }
 }
