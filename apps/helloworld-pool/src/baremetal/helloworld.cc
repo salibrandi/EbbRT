@@ -5,5 +5,4 @@
 
 #include "Printer.h"
 
-//void AppMain() { printer->Print("Hello World\n"); }
-void AppMain() {  }
+void AppMain() { printer->Print("Hello World\n"); }

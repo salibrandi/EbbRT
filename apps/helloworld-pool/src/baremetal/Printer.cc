@@ -56,7 +56,5 @@ void Printer::Print(const char* str) {
 
 void Printer::ReceiveMessage(ebbrt::Messenger::NetworkId nid,
                              std::unique_ptr<ebbrt::IOBuf>&& buffer) {
-    ebbrt::event_manager->Spawn([]() {
-        printer->Print("Hello World\n");
-    });
+  throw std::runtime_error("Printer: Received message unexpectedly!");
 }
