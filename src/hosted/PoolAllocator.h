@@ -27,6 +27,7 @@ namespace ebbrt {
       void AllocatePool(std::string binary_path, int numNodes);
       void AllocateNode(int i);
       ebbrt::NodeAllocator::NodeDescriptor GetNodeDescriptor(int i);
+      ebbrt::Messenger::NetworkId GetNidAt(int i) { return nids_[i];};
       ebbrt::Future<void> waitPool() { return std::move(pool_promise_.GetFuture()); }
   };
   const constexpr auto pool_allocator = EbbRef<PoolAllocator>(kPoolAllocatorId);
