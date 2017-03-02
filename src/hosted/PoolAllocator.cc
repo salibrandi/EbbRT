@@ -19,7 +19,9 @@ void ebbrt::PoolAllocator::AllocateNode(int i) {
   auto nd = ebbrt::node_allocator->AllocateNode(binary_path_);
   nd.NetworkId().Then([this,i](ebbrt::Future<ebbrt::Messenger::NetworkId> inner) {
     auto nid =inner.Get();
-    std::cerr << "Allocated Node: " << i << std::endl;
+#ifndef NDEBUG
+    std::cerr << "# allocated Node: " << i << std::endl;
+#endif
     num_nodes_alloc_.fetch_add(1);
     nids_[i] = nid;
     
