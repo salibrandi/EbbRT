@@ -168,7 +168,9 @@ void Cpu::Shutdown(void) {
         return;
     }
     for (size_t i = 0; i < numCpus_; i++) {
-      printf("stopping cpu %zd\n", i);
+#ifndef NDEBUG
+      std::cerr << "# stopping CPU " << i << std::endl;
+#endif
       GetByIndex(i)->ctxt_.io_service_.stop();
     }
   }
