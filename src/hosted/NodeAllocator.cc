@@ -244,7 +244,8 @@ void ebbrt::NodeAllocator::AppendArgs(std::string arg) {
 ebbrt::NodeAllocator::NodeDescriptor
 ebbrt::NodeAllocator::AllocateNode(std::string binary_path, int cpus,
                                    int numaNodes, int ram,
-                                   std::string arguments) {
+                                   std::string arguments,
+                                   std::string constraint_node) {
   
   if (cpus == 0)
     cpus = DefaultCpus;
@@ -280,6 +281,11 @@ ebbrt::NodeAllocator::AllocateNode(std::string binary_path, int cpus,
 #ifndef NDEBUG
   docker_args << " --expose 1234 -e DEBUG=true";
 #endif
+
+  if (!constraint_node.empty()) {
+    docker_args << " -e constraint:node==" << constraint_node << " ";
+  }
+
   if (CustomNetworkNodeArguments.empty()) {
     docker_args << " --net=" << network_id_ << " ";
   } else {

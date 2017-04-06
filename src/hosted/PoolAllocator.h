@@ -7,6 +7,8 @@
 #define HOSTED_SRC_INCLUDE_EBBRT_POOLALLOCATOR_H_
 
 #include <string>
+#include <iostream>
+#include <sstream>
 
 #include "../StaticSharedEbb.h"
 #include "EbbRef.h"
@@ -22,8 +24,10 @@ namespace ebbrt {
       std::atomic<int> num_nodes_alloc_;
       std::string binary_path_;
       ebbrt::Promise<void> pool_promise_;
+      std::vector<std::string> nodes_;
 
     public:
+      std::string RunCmd(std::string cmd);
       void AllocatePool(std::string binary_path, int numNodes);
       void AllocateNode(int i);
       ebbrt::NodeAllocator::NodeDescriptor GetNodeDescriptor(int i);
