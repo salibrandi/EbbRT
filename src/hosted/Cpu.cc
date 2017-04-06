@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include <array>
+#include <iostream>
 
 #include <boost/container/static_vector.hpp>
 #include <boost/filesystem.hpp>
