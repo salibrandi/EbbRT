@@ -157,8 +157,6 @@ ebbrt::NodeAllocator::NodeAllocator() : node_index_(2), allocation_index_(0) {
     DefaultRam = (str) ? atoi(str) : kDefaultRam;
     str = getenv("EBBRT_NODE_ALLOCATOR_DEFAULT_NUMANODES");
     DefaultNumaNodes = (str) ? atoi(str) : kDefaultNumaNodes;
-    str = getenv("EBBRT_NODE_ALLOCATOR_DEFAULT_NUMANODES");
-    DefaultNumaNodes = (str) ? atoi(str) : kDefaultNumaNodes;
     str = getenv("EBBRT_NODE_ALLOCATOR_DEFAULT_ARGUMENTS");
     DefaultArguments = (str) ? std::string(str) : std::string();
     // Network create configuration
@@ -183,9 +181,15 @@ ebbrt::NodeAllocator::NodeAllocator() : node_index_(2), allocation_index_(0) {
                         ".IPAM.Config}}{{.Gateway}}{{end}}' " +
                         network_id_);
   } else {
-    std::cerr << "Creating custom network" << std::endl;
-    network_id_ = RunCmd(CustomNetworkCreate);
-    network_ip = RunCmd(CustomNetworkIp + network_id_);
+    if (CustomNetworkNodeArguments.find("weave") != std::string::npos) {
+      std::cerr << "Connecting to weave network" << std::endl;
+      network_id_ = "weave";
+      network_ip = RunCmd(CustomNetworkIp);
+    } else {
+      std::cerr << "Creating custom network" << std::endl;
+      network_id_ = RunCmd(CustomNetworkCreate);
+      network_ip = RunCmd(CustomNetworkIp + network_id_);
+    }
   }
 
   uint8_t ip0, ip1, ip2, ip3;
@@ -246,7 +250,21 @@ void ebbrt::NodeAllocator::AppendArgs(std::string arg) {
 ebbrt::NodeAllocator::NodeDescriptor
 ebbrt::NodeAllocator::AllocateNode(std::string binary_path, int cpus,
                                    int numaNodes, int ram,
-                                   std::string arguments) {
+                                   std::string arguments,
+                                   std::string constraint_node) {
+  
+  if (cpus == 0)
+    cpus = DefaultCpus;
+
+  if (numaNodes == 0)
+    numaNodes = DefaultNumaNodes;
+
+  if (ram == 0)
+    ram = DefaultRam;
+
+  if (arguments == "")
+    arguments = DefaultArguments;
+
   RunCmd("file " + binary_path);
   auto allocation_id =
       node_allocator->allocation_index_.fetch_add(1, std::memory_order_relaxed);
@@ -269,10 +287,15 @@ ebbrt::NodeAllocator::AllocateNode(std::string binary_path, int cpus,
 #ifndef NDEBUG
   docker_args << " --expose 1234 -e DEBUG=true";
 #endif
+
+  if (!constraint_node.empty()) {
+    docker_args << " -e constraint:node==" << constraint_node << " ";
+  }
+
   if (CustomNetworkNodeArguments.empty()) {
     docker_args << " --net=" << network_id_ << " ";
   } else {
-    docker_args << CustomNetworkNodeArguments << " ";
+    docker_args << " " << CustomNetworkNodeArguments << " ";
   }
   docker_args << " -td -P --cap-add NET_ADMIN"
               << " --device /dev/kvm:/dev/kvm"
@@ -326,6 +349,10 @@ ebbrt::NodeAllocator::AllocateNode(std::string binary_path, int cpus,
 }
 ebbrt::NodeAllocator::~NodeAllocator() {
   nodes_.clear();
+  /* If weave is the network don't remove it */
+  if (CustomNetworkNodeArguments.find("weave") != std::string::npos) {
+    return;
+  }
   if (CustomNetworkRemove.empty()) {
     std::cerr << "removing Network: " << network_id_.substr(0, 12) << std::endl;
     RunCmd("docker network rm " + network_id_);
